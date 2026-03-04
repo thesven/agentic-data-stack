@@ -1,11 +1,11 @@
 # Agentic Data Stack
 
 A self-hosted stack for agentic analytics — your chat, your models, your data warehouse.
-Powered by [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/), [LibreChat](https://librechat.ai), and [Langfuse](https://langfuse.com).
+Powered by [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/), [LibreChat](https://librechat.ai), and [Arize Phoenix](https://phoenix.arize.com/).
 
 ## Overview
 
-This project runs a fully self-hosted agentic analytics environment with Docker Compose. It connects a chat UI (LibreChat) to your data warehouse via [MCP](https://modelcontextprotocol.io/), with full LLM observability (Langfuse) — all in a single `docker compose up` command.
+This project runs a fully self-hosted agentic analytics environment with Docker Compose. It connects a chat UI (LibreChat) to your data warehouse via [MCP](https://modelcontextprotocol.io/), with full LLM observability (Phoenix) — all in a single `docker compose up` command.
 
 **Supported warehouses:** BigQuery, Snowflake, and ClickHouse — configure one or more in `tools.yaml`.
 
@@ -15,12 +15,9 @@ This project runs a fully self-hosted agentic analytics environment with Docker 
 |---|---|---|
 | **LibreChat** | Chat UI with multi-model support (OpenAI, Anthropic, Google) | `3080` |
 | **MCP Toolbox** | Warehouse-agnostic MCP server (BigQuery, Snowflake, ClickHouse) | `5050` |
-| **Langfuse** | LLM observability — traces, cost tracking, evals, prompt management | `3000` |
-| **ClickHouse** | Analytical database (used internally by Langfuse) | `8123` |
-| **PostgreSQL** | Transactional database for Langfuse | `5432` |
+| **Phoenix** | LLM observability — traces, cost tracking, evals, prompt management | `6006` |
+| **LiteLLM** | LLM proxy — routes requests and exports OTEL traces to Phoenix | `4000` |
 | **MongoDB** | Transactional database for LibreChat | `27017` |
-| **MinIO** | S3-compatible object storage | `9090` |
-| **Redis** | Caching and queue | `6379` |
 | **Meilisearch** | Full-text search for LibreChat | `7700` |
 | **pgvector** | Vector database for RAG | `5433` |
 | **RAG API** | Retrieval-augmented generation for file uploads | `8001` |
@@ -138,9 +135,9 @@ docker compose up -d
 
 | Service | URL | Credentials |
 |---|---|---|
-| **LibreChat** | [http://localhost:3080](http://localhost:3080) | From `.env` (`LANGFUSE_INIT_USER_EMAIL` / `LANGFUSE_INIT_USER_PASSWORD`) |
-| **Langfuse** | [http://localhost:3000](http://localhost:3000) | Same as above |
-| **MinIO Console** | [http://localhost:9091](http://localhost:9091) | From `.env` (`MINIO_ROOT_USER` / `PASSWORD`) |
+| **LibreChat** | [http://localhost:3080](http://localhost:3080) | From `.env` (`LIBRECHAT_USER_EMAIL` / `LIBRECHAT_USER_PASSWORD`) |
+| **Phoenix** | [http://localhost:6006](http://localhost:6006) | No auth required |
+| **LiteLLM** | [http://localhost:4000](http://localhost:4000) | Optional `LITELLM_MASTER_KEY` |
 
 An admin user is created automatically on first startup using the credentials from your `.env` file.
 
@@ -148,11 +145,11 @@ An admin user is created automatically on first startup using the credentials fr
 
 1. Open LibreChat at [http://localhost:3080](http://localhost:3080)
 2. Click **Create New Agent** in the sidebar
-3. Select a provider and model (e.g., Google / gemini-2.0-flash)
+3. Select a provider and model (e.g., Google / gemini-2.5-flash)
 4. Open **MCP Settings** and verify the `data-warehouse` server is connected
 5. Save the agent and start chatting — ask it to query your data
 
-All agent interactions are automatically traced in Langfuse. Open [http://localhost:3000](http://localhost:3000) to see traces, token usage, cost, and latency for every conversation.
+All LLM interactions are automatically traced in Phoenix via the LiteLLM proxy. MCP Toolbox also exports tool execution spans to Phoenix via OTEL. Open [http://localhost:6006](http://localhost:6006) to see traces, token usage, cost, and latency for every conversation.
 
 ## Data Warehouse Authentication
 
@@ -174,7 +171,7 @@ Create a `docker-compose.override.yml` (gitignored) to mount your local ADC:
 ```yaml
 services:
   toolbox-mcp:
-    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000"]
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:4318"]
     volumes:
       - type: bind
         source: ./tools.yaml
@@ -214,9 +211,13 @@ TOOLBOX_CLICKHOUSE_PASSWORD=your_password
 
 ## Architecture
 
-![Architecture](assets/architecture.png)
+```
+LibreChat → LiteLLM Proxy → LLM APIs  (LiteLLM exports OTEL traces → Phoenix)
+LibreChat → MCP Toolbox → Data Warehouse  (Toolbox exports OTEL traces → Phoenix)
+Phoenix (single container, PostgreSQL backend)
+```
 
-LibreChat connects to your data warehouse through MCP Toolbox, allowing AI agents to query and analyze your data using natural language. All LLM interactions are traced in Langfuse for observability, cost tracking, and evaluation.
+LibreChat connects to your data warehouse through MCP Toolbox, allowing AI agents to query and analyze your data using natural language. All LLM interactions are traced in Phoenix for observability, cost tracking, and evaluation.
 
 ## Configuration
 
@@ -224,9 +225,10 @@ LibreChat connects to your data warehouse through MCP Toolbox, allowing AI agent
 |---|---|
 | `tools.yaml` | Data warehouse connections and MCP tools |
 | `librechat.yaml` | LLM endpoints, MCP servers, and agent capabilities |
+| `litellm_config.yaml` | LiteLLM model routing and OTEL export config |
 | `.env` | All credentials and service configuration (see `.env.example`) |
 | `docker-compose.yml` | Includes the three compose files below |
-| `langfuse-compose.yml` | Langfuse, ClickHouse, PostgreSQL, Redis, MinIO |
+| `phoenix-compose.yml` | Phoenix, Phoenix PostgreSQL, LiteLLM |
 | `toolbox-mcp-compose.yml` | MCP Toolbox for Databases |
 | `librechat-compose.yml` | LibreChat, MongoDB, Meilisearch, pgvector, RAG API |
 
@@ -265,11 +267,14 @@ docker compose up -d
 
 **MCP server not showing in agent config:** Check that LibreChat can reach the Toolbox container. Run `docker logs <toolbox-mcp-container>` to confirm Toolbox initialized 1+ tools, and `docker logs <librechat-container>` for MCP client initialization messages.
 
+**No traces in Phoenix:** Verify LiteLLM can reach Phoenix: `docker logs <litellm-container>` should show OTEL export activity. Check that `OTEL_ENDPOINT` is set to `http://phoenix:6006` in the LiteLLM container.
+
 > **Note:** To use LibreChat's **file search / RAG** features, the RAG API needs a real API key for embeddings — `user_provided` won't work because the RAG API calls the embeddings endpoint directly. If `OPENAI_API_KEY` is set to `user_provided`, set `RAG_OPENAI_API_KEY` to a valid OpenAI key (it overrides `OPENAI_API_KEY` for RAG only). You can also switch embedding providers via `EMBEDDINGS_PROVIDER` (`openai`, `azure`, `huggingface`, `huggingfacetei`, `ollama`). See the [RAG API docs](https://librechat.ai/docs/configuration/rag_api) for details.
 
 ## Links
 
 - [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/) — Warehouse-agnostic MCP server
 - [LibreChat](https://github.com/danny-avila/LibreChat) — Chat UI
-- [Langfuse](https://langfuse.com) — LLM observability
+- [Arize Phoenix](https://phoenix.arize.com/) — LLM observability
+- [LiteLLM](https://docs.litellm.ai/) — LLM proxy
 - [LibreChat Documentation](https://librechat.ai/docs) — Full LibreChat configuration guide
