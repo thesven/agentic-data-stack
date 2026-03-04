@@ -47,9 +47,14 @@ endpoints:
 mcpSettings:
   allowedDomains:
     - "toolbox-mcp"
+    # - "snowflake-mcp"
 
 mcpServers:
   data-warehouse:
     type: streamable-http
     url: http://toolbox-mcp:5000/mcp
     timeout: 60000
+  # snowflake:
+  #   type: streamable-http
+  #   url: http://snowflake-mcp:9000/mcp
+  #   timeout: 60000

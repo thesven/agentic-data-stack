@@ -17,8 +17,10 @@
 #     source: bigquery
 #     description: "Execute a SQL query against BigQuery using GoogleSQL syntax."
 
-# ── Snowflake ────────────────────────────────────────
+# ── Snowflake (MCP Toolbox — password auth only) ─────
 # Requires: SNOWFLAKE_USER and SNOWFLAKE_PASSWORD in .env
+# For RSA key-pair auth, use the Snowflake Labs MCP server instead
+# (see snowflake-mcp-compose.yml).
 #
 # sources:
 #   snowflake:

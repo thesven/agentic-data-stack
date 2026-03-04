@@ -1,0 +1,31 @@
+# Snowflake Labs MCP Server
+# Supports both password and RSA key-pair authentication.
+# Docs: https://github.com/Snowflake-Labs/mcp
+
+services:
+  snowflake-mcp:
+    build:
+      context: ./docker/snowflake-mcp
+    restart: always
+    ports:
+      - "127.0.0.1:9010:9000"
+    volumes:
+      - type: bind
+        source: ./snowflake-config.yaml
+        target: /app/snowflake-config.yaml
+        read_only: true
+    environment:
+      SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT:-}
+      SNOWFLAKE_USER: ${SNOWFLAKE_USER:-}
+      SNOWFLAKE_PASSWORD: ${SNOWFLAKE_PASSWORD:-}
+      SNOWFLAKE_PRIVATE_KEY: ${SNOWFLAKE_PRIVATE_KEY:-}
+      SNOWFLAKE_PRIVATE_KEY_FILE_PWD: ${SNOWFLAKE_PRIVATE_KEY_FILE_PWD:-}
+      SNOWFLAKE_ROLE: ${SNOWFLAKE_ROLE:-}
+      SNOWFLAKE_WAREHOUSE: ${SNOWFLAKE_WAREHOUSE:-}
+      SNOWFLAKE_DATABASE: ${SNOWFLAKE_DATABASE:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/mcp')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s

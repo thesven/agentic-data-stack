@@ -196,12 +196,62 @@ gcloud auth application-default login
 
 ### Snowflake
 
-Set these in your `.env` file:
+Two MCP servers are available for Snowflake, depending on your auth method:
+
+**Password auth (MCP Toolbox):**
+
+Set these in your `.env` file and configure `tools.yaml`:
 
 ```
 SNOWFLAKE_USER=your_user
 SNOWFLAKE_PASSWORD=your_password
 ```
+
+**RSA key-pair auth (Snowflake Labs MCP):**
+
+The [Snowflake Labs MCP server](https://github.com/Snowflake-Labs/mcp) supports key-pair authentication via `.p8` files. To use it:
+
+1. Generate an RSA key pair (if you don't have one):
+
+   ```bash
+   openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+   openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+   ```
+
+2. Assign the public key to your Snowflake user:
+
+   ```sql
+   ALTER USER your_user SET RSA_PUBLIC_KEY='<paste contents of rsa_key.pub, without header/footer>';
+   ```
+
+3. Set the env vars in `.env`:
+
+   ```
+   SNOWFLAKE_ACCOUNT=your-account.us-east-1
+   SNOWFLAKE_USER=your_user
+   SNOWFLAKE_PRIVATE_KEY=<paste the private key content, without header/footer>
+   SNOWFLAKE_ROLE=your_role
+   SNOWFLAKE_WAREHOUSE=COMPUTE_WH
+   SNOWFLAKE_DATABASE=your_database
+   ```
+
+   For encrypted keys, also set `SNOWFLAKE_PRIVATE_KEY_FILE_PWD`.
+
+4. Uncomment the Snowflake Labs MCP include in `docker-compose.yml`:
+
+   ```yaml
+   - snowflake-mcp-compose.yml
+   ```
+
+5. Uncomment the `snowflake` MCP server in `librechat.yaml` (both `allowedDomains` and `mcpServers`).
+
+6. Restart the stack:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+The Snowflake Labs MCP server also supports password auth — just set `SNOWFLAKE_PASSWORD` instead of `SNOWFLAKE_PRIVATE_KEY`.
 
 ### ClickHouse (external)
 
@@ -228,6 +278,7 @@ LibreChat connects to your data warehouse through MCP Toolbox, allowing AI agent
 | `docker-compose.yml` | Includes the three compose files below |
 | `langfuse-compose.yml` | Langfuse, ClickHouse, PostgreSQL, Redis, MinIO |
 | `toolbox-mcp-compose.yml` | MCP Toolbox for Databases |
+| `snowflake-mcp-compose.yml` | Snowflake Labs MCP server (key-pair auth) |
 | `librechat-compose.yml` | LibreChat, MongoDB, Meilisearch, pgvector, RAG API |
 
 **Local overrides:** Create `docker-compose.override.yml` for machine-specific config (gitignored by default). You can also mount a gitignored `tools.local.yaml` from that override if you want per-machine MCP tool config.

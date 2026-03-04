@@ -90,9 +90,17 @@ CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
 # BigQuery
 # GCP_CREDENTIALS_FILE=./secrets/gcp-service-account.json
 # Store key files outside the repo or under ./secrets/ (gitignored).
-# Snowflake
+# Snowflake (shared by both MCP servers)
+# SNOWFLAKE_ACCOUNT=your-account.us-east-1
 # SNOWFLAKE_USER=
 # SNOWFLAKE_PASSWORD=
+# SNOWFLAKE_ROLE=
+# SNOWFLAKE_WAREHOUSE=COMPUTE_WH
+# SNOWFLAKE_DATABASE=
+
+# Snowflake RSA Key-Pair Auth (Snowflake Labs MCP only)
+# SNOWFLAKE_PRIVATE_KEY=
+# SNOWFLAKE_PRIVATE_KEY_FILE_PWD=
 # ClickHouse (external, not Langfuse's internal instance)
 # TOOLBOX_CLICKHOUSE_USER=
 # TOOLBOX_CLICKHOUSE_PASSWORD=
