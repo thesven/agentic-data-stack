@@ -12,9 +12,9 @@ echo "=================================================="
 echo ""
 
 # Read credentials from environment variables (passed from .env)
-LIBRECHAT_USER_EMAIL=${LANGFUSE_INIT_USER_EMAIL:-admin@admin.com}
-LIBRECHAT_USER_PASSWORD=${LANGFUSE_INIT_USER_PASSWORD:-password}
-LIBRECHAT_USER_NAME=${LANGFUSE_INIT_USER_NAME:-Admin}
+LIBRECHAT_USER_EMAIL=${LIBRECHAT_USER_EMAIL:-admin@admin.com}
+LIBRECHAT_USER_PASSWORD=${LIBRECHAT_USER_PASSWORD:-password}
+LIBRECHAT_USER_NAME=${LIBRECHAT_USER_NAME:-Admin}
 USERNAME=$(echo ${LIBRECHAT_USER_EMAIL} | cut -d'@' -f1)
 
 echo "Target user: ${LIBRECHAT_USER_EMAIL}"

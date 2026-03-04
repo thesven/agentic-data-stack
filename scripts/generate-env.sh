@@ -7,26 +7,8 @@ set -e
 
 echo "Generating cryptographically random credentials..."
 
-# Generate random passwords using openssl
-POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
-CLICKHOUSE_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
-REDIS_AUTH=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
-MINIO_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
-
-# Generate Langfuse-specific keys
-ENCRYPTION_KEY=$(openssl rand -hex 32)
-NEXTAUTH_SECRET=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
-SALT=$(openssl rand -hex 16)
-
-# Generate Langfuse initialization IDs (required for headless initialization)
-LANGFUSE_INIT_ORG_ID="org-$(openssl rand -hex 8)"
-LANGFUSE_INIT_ORG_NAME="Default Organization"
-LANGFUSE_INIT_PROJECT_ID="proj-$(openssl rand -hex 8)"
-LANGFUSE_INIT_PROJECT_NAME="Default Project"
-
-# Generate Langfuse API keys (format: pk-lf-... and sk-lf-...)
-LANGFUSE_INIT_PROJECT_PUBLIC_KEY="pk-lf-$(openssl rand -hex 16)"
-LANGFUSE_INIT_PROJECT_SECRET_KEY="sk-lf-$(openssl rand -hex 16)"
+# Generate Phoenix database password
+PHOENIX_DB_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
 
 # Generate LibreChat-specific credentials
 LIBRECHAT_PORT=${LIBRECHAT_PORT:-3080}
@@ -36,34 +18,14 @@ VECTORDB_DB=${VECTORDB_DB:-librechat_vectordb}
 VECTORDB_USER=${VECTORDB_USER:-vectordb_user}
 VECTORDB_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
 
-
-# Generate LibreChat JWT secret (required for authentication)
+# Generate LibreChat JWT secrets
 JWT_SECRET=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
 JWT_REFRESH_SECRET=$(openssl rand -base64 32 | tr -d '/+=' | cut -c1-32)
 
-# # Prompt for user email or use default
-# read -p "Enter initial Langfuse user email (default: admin@example.com): " USER_EMAIL
-# USER_EMAIL=${USER_EMAIL:-admin@example.com}
-
-# # Prompt for user password or generate one
-# read -p "Enter initial Langfuse user password (default: will generate random): " USER_PASSWORD
-# if [ -z "$USER_PASSWORD" ]; then
-#     USER_PASSWORD=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
-#     echo "Generated password: $USER_PASSWORD"
-# fi
-
+# User credentials
 USER_EMAIL=${USER_EMAIL:-admin@admin.com}
 USER_PASSWORD=${USER_PASSWORD:-password}
 USER_NAME=${USER_NAME:-Admin}
-
-
-# LibreChat uses the same credentials as Langfuse
-LIBRECHAT_USER_EMAIL=${USER_EMAIL}
-LIBRECHAT_USER_PASSWORD=${USER_PASSWORD}
-LIBRECHAT_USER_NAME=${LANGFUSE_INIT_USER_NAME}
-
-# ClickHouse user (default is 'clickhouse' per Langfuse config)
-CLICKHOUSE_USER=${CLICKHOUSE_USER:-clickhouse}
 
 # Write to .env file
 cat > .env << EOF
@@ -71,17 +33,17 @@ cat > .env << EOF
 # DO NOT COMMIT THIS FILE - It contains secrets!
 
 # ============================================
-# PostgreSQL Configuration
+# Phoenix Configuration (LLM Observability)
 # ============================================
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-POSTGRES_DB=postgres
+PHOENIX_DB_USER=phoenix
+PHOENIX_DB_PASSWORD=${PHOENIX_DB_PASSWORD}
+PHOENIX_DB_NAME=phoenix
 
 # ============================================
-# ClickHouse Configuration
+# LiteLLM Proxy Configuration
 # ============================================
-CLICKHOUSE_USER=${CLICKHOUSE_USER}
-CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+# Optional: set a master key to protect the LiteLLM admin API
+# LITELLM_MASTER_KEY=
 
 # ============================================
 # MCP Toolbox — Data Warehouse Configuration
@@ -101,84 +63,27 @@ CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
 # Snowflake RSA Key-Pair Auth (Snowflake Labs MCP only)
 # SNOWFLAKE_PRIVATE_KEY=
 # SNOWFLAKE_PRIVATE_KEY_FILE_PWD=
-# ClickHouse (external, not Langfuse's internal instance)
+# ClickHouse (external)
 # TOOLBOX_CLICKHOUSE_USER=
 # TOOLBOX_CLICKHOUSE_PASSWORD=
 
 # ============================================
-# Redis Configuration
-# ============================================
-REDIS_AUTH=${REDIS_AUTH}
-
-# ============================================
-# MinIO Configuration
-# ============================================
-MINIO_ROOT_USER=minio
-MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-
-# ============================================
-# Langfuse Configuration
-# ============================================
-ENCRYPTION_KEY=${ENCRYPTION_KEY}
-NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-SALT=${SALT}
-
-# Langfuse Initialization (required for headless setup)
-LANGFUSE_INIT_ORG_ID=${LANGFUSE_INIT_ORG_ID}
-LANGFUSE_INIT_ORG_NAME=${LANGFUSE_INIT_ORG_NAME}
-LANGFUSE_INIT_PROJECT_ID=${LANGFUSE_INIT_PROJECT_ID}
-LANGFUSE_INIT_PROJECT_NAME=${LANGFUSE_INIT_PROJECT_NAME}
-
-# Langfuse Project Keys (used by the hook)
-LANGFUSE_INIT_PROJECT_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-LANGFUSE_INIT_PROJECT_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-
-# Your login credentials
-LANGFUSE_INIT_USER_EMAIL=${USER_EMAIL}
-LANGFUSE_INIT_USER_PASSWORD=${USER_PASSWORD}
-LANGFUSE_INIT_USER_NAME=${USER_NAME}
-
-# ============================================
-# Langfuse Environment Variables
-# ============================================
-NEXTAUTH_URL=http://localhost:3000
-DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
-CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
-CLICKHOUSE_URL=http://clickhouse:8123
-CLICKHOUSE_CLUSTER_ENABLED=false
-
-# S3/MinIO Configuration
-LANGFUSE_S3_EVENT_UPLOAD_BUCKET=langfuse
-LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=minio
-LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT=http://minio:9000
-
-LANGFUSE_S3_MEDIA_UPLOAD_BUCKET=langfuse
-LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID=minio
-LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT=http://localhost:9090
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-# ============================================
 # LibreChat Configuration
 # ============================================
-LIBRECHAT_PORT=${LIBRECHAT_PORT:-3080}
-RAG_PORT=${RAG_PORT:-8001}
+LIBRECHAT_PORT=${LIBRECHAT_PORT}
+RAG_PORT=${RAG_PORT}
 MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
-VECTORDB_DB=${VECTORDB_DB:-librechat_vectordb}
-VECTORDB_USER=${VECTORDB_USER:-vectordb_user}
+VECTORDB_DB=${VECTORDB_DB}
+VECTORDB_USER=${VECTORDB_USER}
 VECTORDB_PASSWORD=${VECTORDB_PASSWORD}
 
 # ============================================
-# LibreChat Configuration
+# LibreChat Authentication
 # ============================================
 JWT_SECRET=${JWT_SECRET}
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 
 # LibreChat Initial User
-# Note: These are the same as the Langfuse credentials by default
 LIBRECHAT_USER_EMAIL=${USER_EMAIL}
 LIBRECHAT_USER_PASSWORD=${USER_PASSWORD}
 LIBRECHAT_USER_NAME=${USER_NAME}
@@ -200,19 +105,15 @@ echo ""
 echo "✅ Credentials generated successfully!"
 echo ""
 echo "📝 Generated .env file with:"
-echo "   - PostgreSQL password"
-echo "   - ClickHouse password"
-echo "   - Redis auth token"
-echo "   - MinIO root password"
-echo "   - Langfuse encryption key"
-echo "   - Langfuse NextAuth secret"
-echo "   - Langfuse salt"
-echo "   - Langfuse API keys"
+echo "   - Phoenix database password"
+echo "   - LibreChat JWT secrets"
+echo "   - LibreChat encryption keys"
+echo "   - Meilisearch master key"
+echo "   - VectorDB password"
 echo "   - Initial user credentials (preset)"
 echo ""
 echo "👤 Preset User Credentials:"
 echo "   Email: ${USER_EMAIL}"
-# echo "   Password: ${USER_PASSWORD}"
 echo ""
 echo "💡 To customize credentials, run with environment variables:"
 echo "   USER_EMAIL=your@email.com USER_PASSWORD=yourpass USER_NAME=yourname ./scripts/generate-env.sh"
@@ -221,11 +122,10 @@ echo "📡 MCP Toolbox will be available at: http://toolbox-mcp:5000"
 echo "   Configure your warehouse in tools.yaml"
 echo ""
 echo "💬 LibreChat will be available at: http://localhost:${LIBRECHAT_PORT}"
-echo "   MongoDB: localhost:27017"
-echo "   Meilisearch: localhost:7700"
-echo "   VectorDB: localhost:5433"
+echo "🔭 Phoenix will be available at: http://localhost:6006"
+echo "🔀 LiteLLM Proxy will be available at: http://localhost:4000"
 echo ""
-echo "📝 LibreChat Initial User (same as Langfuse)"
+echo "📝 LibreChat Initial User:"
 echo "   Email: ${USER_EMAIL}"
 echo "   Password: ${USER_PASSWORD}"
 echo "   Name: ${USER_NAME}"

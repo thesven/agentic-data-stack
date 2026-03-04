@@ -1,0 +1,74 @@
+# Arize Phoenix (LLM Observability) + LiteLLM Proxy
+# Phoenix: OTEL-native tracing UI on PostgreSQL
+# LiteLLM: LLM proxy that exports OTEL traces to Phoenix
+
+services:
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    restart: always
+    ports:
+      - "6006:6006"       # UI + OTLP HTTP
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
+    environment:
+      PHOENIX_SQL_DATABASE_URL: postgresql://${PHOENIX_DB_USER:-phoenix}:${PHOENIX_DB_PASSWORD}@phoenix-db:5432/${PHOENIX_DB_NAME:-phoenix}
+      PHOENIX_ENABLE_AUTH: "false"
+    depends_on:
+      phoenix-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6006/healthz')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  phoenix-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: ${PHOENIX_DB_USER:-phoenix}
+      POSTGRES_PASSWORD: ${PHOENIX_DB_PASSWORD}
+      POSTGRES_DB: ${PHOENIX_DB_NAME:-phoenix}
+    volumes:
+      - phoenix_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PHOENIX_DB_USER:-phoenix}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: always
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - type: bind
+        source: ./litellm_config.yaml
+        target: /app/config.yaml
+        read_only: true
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-litellm-proxy}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_KEY: ${GOOGLE_KEY:-}
+      # OTEL export to Phoenix
+      OTEL_EXPORTER: otlp_http
+      OTEL_ENDPOINT: http://phoenix:6006
+      OTEL_HEADERS: ""
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    depends_on:
+      phoenix:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  phoenix_postgres_data:
+    driver: local

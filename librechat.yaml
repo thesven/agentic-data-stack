@@ -34,14 +34,44 @@ endpoints:
         'chain',
         'ocr',
       ]
-  openAI:
-    fetch: true
-  
-  anthropic:
-    fetch: true
-  
-  google:
-    fetch: true
+  # Route all LLM traffic through LiteLLM proxy for OTEL tracing
+  # API keys are held by LiteLLM, not LibreChat
+  custom:
+    - name: "OpenAI"
+      apiKey: "sk-litellm-proxy"
+      baseURL: "http://litellm:4000/v1"
+      models:
+        default: ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o3-mini", "o4-mini", "gpt-5.2"]
+        fetch: false
+      titleConvo: true
+      titleModel: "gpt-4.1-nano"
+      summarize: false
+      forcePrompt: false
+      modelDisplayLabel: "OpenAI"
+
+    - name: "Anthropic"
+      apiKey: "sk-litellm-proxy"
+      baseURL: "http://litellm:4000/v1"
+      models:
+        default: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+        fetch: false
+      titleConvo: true
+      titleModel: "claude-haiku-4-5-20251001"
+      summarize: false
+      forcePrompt: false
+      modelDisplayLabel: "Anthropic"
+
+    - name: "Google"
+      apiKey: "sk-litellm-proxy"
+      baseURL: "http://litellm:4000/v1"
+      models:
+        default: ["gemini-2.5-pro", "gemini-2.5-flash"]
+        fetch: false
+      titleConvo: true
+      titleModel: "gemini-2.5-flash"
+      summarize: false
+      forcePrompt: false
+      modelDisplayLabel: "Google"
 
 
 mcpSettings:
