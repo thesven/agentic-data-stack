@@ -1,7 +1,7 @@
 # Main Docker Compose file
-# Includes all services: Langfuse, MCP Toolbox, and LibreChat
+# Includes all services: Phoenix (observability), MCP Toolbox, and LibreChat
 
 include:
-  - langfuse-compose.yml
+  - phoenix-compose.yml
   - toolbox-mcp-compose.yml
   - librechat-compose.yml

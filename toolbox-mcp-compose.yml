@@ -6,7 +6,7 @@ services:
   toolbox-mcp:
     image: us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:latest
     restart: always
-    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000"]
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:4318"]
     volumes:
       - type: bind
         source: ./tools.yaml
@@ -26,6 +26,8 @@ services:
       # ClickHouse: set these in .env
       TOOLBOX_CLICKHOUSE_USER: ${TOOLBOX_CLICKHOUSE_USER:-}
       TOOLBOX_CLICKHOUSE_PASSWORD: ${TOOLBOX_CLICKHOUSE_PASSWORD:-}
+      # OTEL export to Phoenix
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
     ports:
       - "127.0.0.1:5050:5000"
     healthcheck:
