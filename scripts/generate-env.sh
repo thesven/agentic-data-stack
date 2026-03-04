@@ -52,10 +52,12 @@ PHOENIX_DB_NAME=phoenix
 # BigQuery
 # GCP_CREDENTIALS_FILE=./secrets/gcp-service-account.json
 # Store key files outside the repo or under ./secrets/ (gitignored).
-# Snowflake (shared by both MCP servers)
-# SNOWFLAKE_ACCOUNT=your-account.us-east-1
+# Snowflake — Base credentials (used by MCP Toolbox and Snowflake Labs MCP)
 # SNOWFLAKE_USER=
 # SNOWFLAKE_PASSWORD=
+
+# Snowflake — Snowflake Labs MCP only (see snowflake-mcp-compose.yml)
+# SNOWFLAKE_ACCOUNT=your-account.us-east-1
 # SNOWFLAKE_ROLE=
 # SNOWFLAKE_WAREHOUSE=COMPUTE_WH
 # SNOWFLAKE_DATABASE=
@@ -63,6 +65,7 @@ PHOENIX_DB_NAME=phoenix
 # Snowflake RSA Key-Pair Auth (Snowflake Labs MCP only)
 # SNOWFLAKE_PRIVATE_KEY=
 # SNOWFLAKE_PRIVATE_KEY_FILE_PWD=
+
 # ClickHouse (external)
 # TOOLBOX_CLICKHOUSE_USER=
 # TOOLBOX_CLICKHOUSE_PASSWORD=

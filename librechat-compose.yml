@@ -4,7 +4,7 @@ services:
     image: ghcr.io/danny-avila/lc-dev:latest
     restart: always
     ports:
-      - "${LIBRECHAT_PORT:-3080}:${LIBRECHAT_PORT:-3080}"
+      - "127.0.0.1:${LIBRECHAT_PORT:-3080}:${LIBRECHAT_PORT:-3080}"
     depends_on:
       mongodb:
         condition: service_started
@@ -34,6 +34,8 @@ services:
       - VECTORDB_DB=${VECTORDB_DB:-mydatabase}
       - VECTORDB_USER=${VECTORDB_USER:-myuser}
       - VECTORDB_PASSWORD=${VECTORDB_PASSWORD:-mypassword}
+      - CREDS_KEY=${CREDS_KEY}
+      - CREDS_IV=${CREDS_IV}
     volumes:
       - type: bind
         source: ./librechat.yaml
