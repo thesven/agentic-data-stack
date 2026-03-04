@@ -10,7 +10,7 @@ services:
         condition: service_started
       meilisearch:
         condition: service_started
-      clickhouse-mcp:
+      toolbox-mcp:
         condition: service_healthy
       rag_api:
         condition: service_started

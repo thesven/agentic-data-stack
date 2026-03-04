@@ -1,35 +1,37 @@
 # Agentic Data Stack
 
-The open-source stack for ClickHouse's suite of agentic analytic tools — your chat, your models, your data.  
-Powered by [ClickHouse](https://clickhouse.com), [LibreChat](https://librechat.ai), and [Langfuse](https://langfuse.com).
-
-> Learn more at [clickhouse.ai](https://clickhouse.ai)
+A self-hosted stack for agentic analytics — your chat, your models, your data warehouse.
+Powered by [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/), [LibreChat](https://librechat.ai), and [Langfuse](https://langfuse.com).
 
 ## Overview
 
-This project runs a fully self-hosted agentic analytics environment with Docker Compose. It connects a chat UI (LibreChat) to your data (ClickHouse) via MCP, with full LLM observability (Langfuse) — all in a single `docker compose up` command.
+This project runs a fully self-hosted agentic analytics environment with Docker Compose. It connects a chat UI (LibreChat) to your data warehouse via [MCP](https://modelcontextprotocol.io/), with full LLM observability (Langfuse) — all in a single `docker compose up` command.
+
+**Supported warehouses:** BigQuery, Snowflake, and ClickHouse — configure one or more in `tools.yaml`.
 
 ### What's included
 
 | Component | Purpose | Port |
 |---|---|---|
-| **LibreChat** | Modern Chat UI with multi-model / provider support (OpenAI, Anthropic, Google) | `3080` |
-| **ClickHouse MCP** | MCP server that gives agents access to ClickHouse | `8000` |
-| **Langfuse** | LLM observability — traces, evals, prompt management | `3000` |
-| **ClickHouse** | World's fastest analytical database | `8123` |
+| **LibreChat** | Chat UI with multi-model support (OpenAI, Anthropic, Google) | `3080` |
+| **MCP Toolbox** | Warehouse-agnostic MCP server (BigQuery, Snowflake, ClickHouse) | `5050` |
+| **Langfuse** | LLM observability — traces, cost tracking, evals, prompt management | `3000` |
+| **ClickHouse** | Analytical database (used internally by Langfuse) | `8123` |
 | **PostgreSQL** | Transactional database for Langfuse | `5432` |
 | **MongoDB** | Transactional database for LibreChat | `27017` |
 | **MinIO** | S3-compatible object storage | `9090` |
 | **Redis** | Caching and queue | `6379` |
 | **Meilisearch** | Full-text search for LibreChat | `7700` |
 | **pgvector** | Vector database for RAG | `5433` |
-| **RAG API** | Retrieval-augmented generation service for LibreChat | `8001` |
+| **RAG API** | Retrieval-augmented generation for file uploads | `8001` |
 
 ## Quick Start
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2+
+- Credentials for at least one data warehouse (BigQuery, Snowflake, or ClickHouse)
+- An API key for at least one LLM provider (OpenAI, Anthropic, or Google)
 
 ### 1. Prepare the environment
 
@@ -37,37 +39,198 @@ This project runs a fully self-hosted agentic analytics environment with Docker 
 ./scripts/prepare-demo.sh
 ```
 
-This is your fastest way to get started with the Agentic Data Stack. It generates a `.env` file with random credentials for all services, then presents an interactive menu to optionally configure API keys for OpenAI, Anthropic, and/or Google. Any providers you skip will remain as `user_provided`, letting users enter their own keys in the LibreChat UI.
+This generates a `.env` file with random credentials for all services, then presents an interactive menu to configure API keys for OpenAI, Anthropic, and/or Google. Any providers you skip will remain as `user_provided`, letting users enter their own keys in the LibreChat UI.
 
-You can also generate credentials separately and customize the initial administrator account credentials:
+You can also generate credentials separately and customize the admin account:
 
 ```bash
 USER_EMAIL="you@example.com" USER_PASSWORD="supersecret" USER_NAME="YourName" ./scripts/generate-env.sh
 ```
 
-Learn more about configuring your LibreChat instance at https://librechat.ai/docs.
+### 2. Configure your data warehouse
 
-> **Note:** To use LibreChat's **file search / RAG** features, the RAG API needs a real API key for embeddings — `user_provided` won't work because the RAG API calls the embeddings endpoint directly. If `OPENAI_API_KEY` is set to `user_provided`, set `RAG_OPENAI_API_KEY` to a valid OpenAI key (it overrides `OPENAI_API_KEY` for RAG only). You can also switch embedding providers via `EMBEDDINGS_PROVIDER` (`openai`, `azure`, `huggingface`, `huggingfacetei`, `ollama`). See the [RAG API docs](https://librechat.ai/docs/configuration/rag_api) for details.
+Edit `tools.yaml` to uncomment and configure the section for your warehouse. Each warehouse section has a **source** (connection details) and a **tool** (what the agent can do).
 
-### 2. Start the stack
+**BigQuery:**
+
+```yaml
+sources:
+  bigquery:
+    kind: bigquery
+    project: your-gcp-project-id
+    location: US
+
+tools:
+  query-bigquery:
+    kind: bigquery-execute-sql
+    source: bigquery
+    description: "Execute a SQL query against BigQuery using GoogleSQL syntax."
+```
+
+Then configure authentication — see [BigQuery Authentication](#bigquery) below.
+
+**Snowflake:**
+
+```yaml
+sources:
+  snowflake:
+    kind: snowflake
+    account: your-account.us-east-1
+    user: ${SNOWFLAKE_USER}
+    password: ${SNOWFLAKE_PASSWORD}
+    database: YOUR_DATABASE
+    schema: PUBLIC
+    warehouse: COMPUTE_WH
+
+tools:
+  query-snowflake:
+    kind: snowflake-sql
+    source: snowflake
+    description: "Execute a SQL query against Snowflake."
+    statement: "{{.sql}}"
+    parameters:
+      - name: sql
+        type: string
+        description: "The SQL query to execute"
+```
+
+Then set `SNOWFLAKE_USER` and `SNOWFLAKE_PASSWORD` in your `.env` file.
+
+**ClickHouse (external):**
+
+```yaml
+sources:
+  clickhouse:
+    kind: clickhouse
+    host: your-clickhouse-host
+    protocol: http
+    port: 8123
+    user: ${TOOLBOX_CLICKHOUSE_USER}
+    password: ${TOOLBOX_CLICKHOUSE_PASSWORD}
+    database: default
+
+tools:
+  query-clickhouse:
+    kind: clickhouse-sql
+    source: clickhouse
+    description: "Execute a SQL query against ClickHouse."
+    statement: "{{.sql}}"
+    parameters:
+      - name: sql
+        type: string
+        description: "The SQL query to execute"
+```
+
+Then set `TOOLBOX_CLICKHOUSE_USER` and `TOOLBOX_CLICKHOUSE_PASSWORD` in your `.env` file.
+For TLS-enabled ClickHouse deployments, use `protocol: https` and `port: 8443`.
+
+> You can configure multiple warehouses at once — just include multiple sources and tools in `tools.yaml`.
+
+For the full list of supported databases and configuration options, see the [MCP Toolbox documentation](https://googleapis.github.io/genai-toolbox/).
+
+### 3. Start the stack
 
 ```bash
 docker compose up -d
 ```
 
-### 3. Access the services
+### 4. Access the services
 
-- **LibreChat** — [http://localhost:3080](http://localhost:3080)
-- **Langfuse** — [http://localhost:3000](http://localhost:3000)
-- **MinIO Console** — [http://localhost:9091](http://localhost:9091) (Find credentials in `.env` under MINIO_ROOT_* fields)
+| Service | URL | Credentials |
+|---|---|---|
+| **LibreChat** | [http://localhost:3080](http://localhost:3080) | From `.env` (`LANGFUSE_INIT_USER_EMAIL` / `LANGFUSE_INIT_USER_PASSWORD`) |
+| **Langfuse** | [http://localhost:3000](http://localhost:3000) | Same as above |
+| **MinIO Console** | [http://localhost:9091](http://localhost:9091) | From `.env` (`MINIO_ROOT_USER` / `PASSWORD`) |
 
 An admin user is created automatically on first startup using the credentials from your `.env` file.
+
+### 5. Create an agent
+
+1. Open LibreChat at [http://localhost:3080](http://localhost:3080)
+2. Click **Create New Agent** in the sidebar
+3. Select a provider and model (e.g., Google / gemini-2.0-flash)
+4. Open **MCP Settings** and verify the `data-warehouse` server is connected
+5. Save the agent and start chatting — ask it to query your data
+
+All agent interactions are automatically traced in Langfuse. Open [http://localhost:3000](http://localhost:3000) to see traces, token usage, cost, and latency for every conversation.
+
+## Data Warehouse Authentication
+
+### BigQuery
+
+Two authentication methods are supported:
+
+**Service account key (recommended for production):**
+
+1. Uncomment the credentials volume mount in `toolbox-mcp-compose.yml`
+2. Uncomment `GOOGLE_APPLICATION_CREDENTIALS` in the environment section
+3. Set `GCP_CREDENTIALS_FILE` in `.env` to your service account JSON path, for example `./secrets/gcp-service-account.json`
+4. Keep the JSON key outside the repository or in `./secrets/` (gitignored by default)
+
+**Application Default Credentials (convenient for local dev):**
+
+Create a `docker-compose.override.yml` (gitignored) to mount your local ADC:
+
+```yaml
+services:
+  toolbox-mcp:
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000"]
+    volumes:
+      - type: bind
+        source: ./tools.yaml
+        target: /app/tools.yaml
+        read_only: true
+      - type: bind
+        source: ~/.config/gcloud/application_default_credentials.json
+        target: /app/credentials.json
+        read_only: true
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+```
+
+Make sure you have valid ADC credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+### Snowflake
+
+Set these in your `.env` file:
+
+```
+SNOWFLAKE_USER=your_user
+SNOWFLAKE_PASSWORD=your_password
+```
+
+### ClickHouse (external)
+
+Set these in your `.env` file:
+
+```
+TOOLBOX_CLICKHOUSE_USER=your_user
+TOOLBOX_CLICKHOUSE_PASSWORD=your_password
+```
 
 ## Architecture
 
 ![Architecture](assets/architecture.png)
 
-LibreChat connects to ClickHouse through the MCP server, allowing AI agents to query and analyze your data. All LLM interactions are traced in Langfuse for observability, evaluation, and prompt management.
+LibreChat connects to your data warehouse through MCP Toolbox, allowing AI agents to query and analyze your data using natural language. All LLM interactions are traced in Langfuse for observability, cost tracking, and evaluation.
+
+## Configuration
+
+| File | Purpose |
+|---|---|
+| `tools.yaml` | Data warehouse connections and MCP tools |
+| `librechat.yaml` | LLM endpoints, MCP servers, and agent capabilities |
+| `.env` | All credentials and service configuration (see `.env.example`) |
+| `docker-compose.yml` | Includes the three compose files below |
+| `langfuse-compose.yml` | Langfuse, ClickHouse, PostgreSQL, Redis, MinIO |
+| `toolbox-mcp-compose.yml` | MCP Toolbox for Databases |
+| `librechat-compose.yml` | LibreChat, MongoDB, Meilisearch, pgvector, RAG API |
+
+**Local overrides:** Create `docker-compose.override.yml` for machine-specific config (gitignored by default). You can also mount a gitignored `tools.local.yaml` from that override if you want per-machine MCP tool config.
 
 ## Scripts
 
@@ -78,15 +241,6 @@ LibreChat connects to ClickHouse through the MCP server, allowing AI agents to q
 | `scripts/reset-all.sh` | Stop all containers and wipe all data/volumes |
 | `scripts/create-librechat-user.sh` | Manually create a LibreChat admin user |
 | `scripts/init-librechat-user.sh` | Auto-init user on container startup (used internally) |
-
-## Configuration
-
-- **LibreChat** — `librechat.yaml` configures endpoints, MCP servers, and agent capabilities
-- **Environment** — `.env` holds all credentials and service configuration (see `.env.example` for reference)
-- **Docker** — `docker-compose.yml` includes the three compose files:
-  - `langfuse-compose.yml` — Langfuse, ClickHouse, PostgreSQL, Redis, MinIO
-  - `clickhouse-mcp-compose.yml` — ClickHouse MCP server
-  - `librechat-compose.yml` — LibreChat, MongoDB, Meilisearch, pgvector, RAG API
 
 ## Reset Everything
 
@@ -103,10 +257,19 @@ Then set up again and start fresh:
 docker compose up -d
 ```
 
+## Troubleshooting
+
+**Port 5050 conflict:** If port `5050` is already in use, change the host mapping in `toolbox-mcp-compose.yml` (for example, `127.0.0.1:5051:5000`) and keep `librechat.yaml` pointed at `http://toolbox-mcp:5000/mcp`.
+
+**"No key found" in LibreChat:** You need to configure an LLM API key. Either set it in `.env` (e.g., `GOOGLE_KEY=your-key`) and restart LibreChat, or run `./scripts/prepare-demo.sh` to set keys interactively.
+
+**MCP server not showing in agent config:** Check that LibreChat can reach the Toolbox container. Run `docker logs <toolbox-mcp-container>` to confirm Toolbox initialized 1+ tools, and `docker logs <librechat-container>` for MCP client initialization messages.
+
+> **Note:** To use LibreChat's **file search / RAG** features, the RAG API needs a real API key for embeddings — `user_provided` won't work because the RAG API calls the embeddings endpoint directly. If `OPENAI_API_KEY` is set to `user_provided`, set `RAG_OPENAI_API_KEY` to a valid OpenAI key (it overrides `OPENAI_API_KEY` for RAG only). You can also switch embedding providers via `EMBEDDINGS_PROVIDER` (`openai`, `azure`, `huggingface`, `huggingfacetei`, `ollama`). See the [RAG API docs](https://librechat.ai/docs/configuration/rag_api) for details.
+
 ## Links
 
-- [clickhouse.ai](http://clickhouse.ai) — Project homepage
-- [Documentation](https://clickhouse.com/docs/use-cases/AI/MCP/librechat) — Full setup guide for adding ClickHouse MCP to LibreChat
-- [ClickHouse MCP](https://github.com/ClickHouse/mcp-clickhouse) — MCP server for ClickHouse
+- [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/) — Warehouse-agnostic MCP server
 - [LibreChat](https://github.com/danny-avila/LibreChat) — Chat UI
 - [Langfuse](https://langfuse.com) — LLM observability
+- [LibreChat Documentation](https://librechat.ai/docs) — Full LibreChat configuration guide

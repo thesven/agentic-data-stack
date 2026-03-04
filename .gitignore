@@ -15,3 +15,12 @@
 # Temporary files
 tmp/
 temp/
+
+# Local override files (user-specific config)
+tools.local.yaml
+docker-compose.override.yml
+
+# Local credential files (avoid accidental key commits)
+secrets/
+*service-account*.json
+gcp-credentials*.json

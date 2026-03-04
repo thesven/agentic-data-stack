@@ -1,0 +1,66 @@
+# MCP Toolbox for Databases — tools.yaml
+# Uncomment the source and tool for your warehouse(s).
+# Docs: https://googleapis.github.io/genai-toolbox/
+
+# ── BigQuery ─────────────────────────────────────────
+# Requires: GCP_CREDENTIALS_FILE in .env (service account JSON)
+#
+# sources:
+#   bigquery:
+#     kind: bigquery
+#     project: your-gcp-project-id
+#     location: US
+#
+# tools:
+#   query-bigquery:
+#     kind: bigquery-execute-sql
+#     source: bigquery
+#     description: "Execute a SQL query against BigQuery using GoogleSQL syntax."
+
+# ── Snowflake ────────────────────────────────────────
+# Requires: SNOWFLAKE_USER and SNOWFLAKE_PASSWORD in .env
+#
+# sources:
+#   snowflake:
+#     kind: snowflake
+#     account: your-account.us-east-1
+#     user: ${SNOWFLAKE_USER}
+#     password: ${SNOWFLAKE_PASSWORD}
+#     database: YOUR_DATABASE
+#     schema: PUBLIC
+#     warehouse: COMPUTE_WH
+#
+# tools:
+#   query-snowflake:
+#     kind: snowflake-sql
+#     source: snowflake
+#     description: "Execute a SQL query against Snowflake."
+#     statement: "{{.sql}}"
+#     parameters:
+#       - name: sql
+#         type: string
+#         description: "The SQL query to execute"
+
+# ── ClickHouse ───────────────────────────────────────
+# Can connect to any ClickHouse instance (not Langfuse's internal one)
+#
+# sources:
+#   clickhouse:
+#     kind: clickhouse
+#     host: your-clickhouse-host
+#     protocol: http
+#     port: 8123
+#     user: ${TOOLBOX_CLICKHOUSE_USER}
+#     password: ${TOOLBOX_CLICKHOUSE_PASSWORD}
+#     database: default
+#
+# tools:
+#   query-clickhouse:
+#     kind: clickhouse-sql
+#     source: clickhouse
+#     description: "Execute a SQL query against ClickHouse."
+#     statement: "{{.sql}}"
+#     parameters:
+#       - name: sql
+#         type: string
+#         description: "The SQL query to execute"

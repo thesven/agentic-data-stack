@@ -1,0 +1,36 @@
+# MCP Toolbox for Databases
+# Warehouse-agnostic MCP server — configure tools.yaml for your warehouse(s).
+# Docs: https://googleapis.github.io/genai-toolbox/
+
+services:
+  toolbox-mcp:
+    image: us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:latest
+    restart: always
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000"]
+    volumes:
+      - type: bind
+        source: ./tools.yaml
+        target: /app/tools.yaml
+        read_only: true
+      # BigQuery: uncomment and set GCP_CREDENTIALS_FILE in .env
+      # - type: bind
+      #   source: ${GCP_CREDENTIALS_FILE}
+      #   target: /app/credentials.json
+      #   read_only: true
+    environment:
+      # BigQuery: uncomment if using the credentials volume mount above
+      # GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+      # Snowflake: set these in .env
+      SNOWFLAKE_USER: ${SNOWFLAKE_USER:-}
+      SNOWFLAKE_PASSWORD: ${SNOWFLAKE_PASSWORD:-}
+      # ClickHouse: set these in .env
+      TOOLBOX_CLICKHOUSE_USER: ${TOOLBOX_CLICKHOUSE_USER:-}
+      TOOLBOX_CLICKHOUSE_PASSWORD: ${TOOLBOX_CLICKHOUSE_PASSWORD:-}
+    ports:
+      - "127.0.0.1:5050:5000"
+    healthcheck:
+      test: ["CMD", "/toolbox", "help"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

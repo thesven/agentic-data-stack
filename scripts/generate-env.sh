@@ -28,9 +28,6 @@ LANGFUSE_INIT_PROJECT_NAME="Default Project"
 LANGFUSE_INIT_PROJECT_PUBLIC_KEY="pk-lf-$(openssl rand -hex 16)"
 LANGFUSE_INIT_PROJECT_SECRET_KEY="sk-lf-$(openssl rand -hex 16)"
 
-# Generate ClickHouse MCP auth token (for HTTP transport)
-CLICKHOUSE_MCP_AUTH_TOKEN=$(openssl rand -hex 32)
-
 # Generate LibreChat-specific credentials
 LIBRECHAT_PORT=${LIBRECHAT_PORT:-3080}
 RAG_PORT=${RAG_PORT:-8001}
@@ -87,9 +84,18 @@ CLICKHOUSE_USER=${CLICKHOUSE_USER}
 CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
 
 # ============================================
-# ClickHouse MCP Configuration
+# MCP Toolbox — Data Warehouse Configuration
 # ============================================
-CLICKHOUSE_MCP_AUTH_TOKEN=${CLICKHOUSE_MCP_AUTH_TOKEN}
+# Uncomment the section(s) for your warehouse and configure tools.yaml to match.
+# BigQuery
+# GCP_CREDENTIALS_FILE=./secrets/gcp-service-account.json
+# Store key files outside the repo or under ./secrets/ (gitignored).
+# Snowflake
+# SNOWFLAKE_USER=
+# SNOWFLAKE_PASSWORD=
+# ClickHouse (external, not Langfuse's internal instance)
+# TOOLBOX_CLICKHOUSE_USER=
+# TOOLBOX_CLICKHOUSE_PASSWORD=
 
 # ============================================
 # Redis Configuration
@@ -195,7 +201,6 @@ echo "   - Langfuse NextAuth secret"
 echo "   - Langfuse salt"
 echo "   - Langfuse API keys"
 echo "   - Initial user credentials (preset)"
-echo "   - ClickHouse MCP auth token"
 echo ""
 echo "👤 Preset User Credentials:"
 echo "   Email: ${USER_EMAIL}"
@@ -204,8 +209,8 @@ echo ""
 echo "💡 To customize credentials, run with environment variables:"
 echo "   USER_EMAIL=your@email.com USER_PASSWORD=yourpass USER_NAME=yourname ./scripts/generate-env.sh"
 echo ""
-echo "📡 ClickHouse MCP will be available at: http://clickhouse-mcp:8000"
-echo "   Auth token: ${CLICKHOUSE_MCP_AUTH_TOKEN}"
+echo "📡 MCP Toolbox will be available at: http://toolbox-mcp:5000"
+echo "   Configure your warehouse in tools.yaml"
 echo ""
 echo "💬 LibreChat will be available at: http://localhost:${LIBRECHAT_PORT}"
 echo "   MongoDB: localhost:27017"

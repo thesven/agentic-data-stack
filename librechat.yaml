@@ -44,10 +44,12 @@ endpoints:
     fetch: true
 
 
+mcpSettings:
+  allowedDomains:
+    - "toolbox-mcp"
+
 mcpServers:
-  clickhouse-mcp:
+  data-warehouse:
     type: streamable-http
-    url: http://clickhouse-mcp:8000/mcp
-    timeout: 60000  # 1 minute timeout
-    headers:
-      Authorization: 'Bearer ${CLICKHOUSE_MCP_AUTH_TOKEN}'
+    url: http://toolbox-mcp:5000/mcp
+    timeout: 60000
