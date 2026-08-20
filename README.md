@@ -147,7 +147,7 @@ An admin user is created automatically on first startup using the credentials fr
 
 1. Open LibreChat at [http://localhost:3080](http://localhost:3080)
 2. Click **Create New Agent** in the sidebar
-3. Select a provider and model (e.g., Google / gemini-2.5-flash)
+3. Select a provider and model (e.g., Google / gemini-3.7-flash)
 4. Open **MCP Settings** and verify the `data-warehouse` server is connected
 5. Save the agent and start chatting — ask it to query your data
 
