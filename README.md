@@ -173,7 +173,7 @@ Create a `docker-compose.override.yml` (gitignored) to mount your local ADC:
 ```yaml
 services:
   toolbox-mcp:
-    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:4318"]
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:6006"]
     volumes:
       - type: bind
         source: ./tools.yaml
