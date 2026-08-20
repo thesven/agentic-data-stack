@@ -36,7 +36,9 @@ This project runs a fully self-hosted agentic analytics environment with Docker 
 ./scripts/prepare-demo.sh
 ```
 
-This generates a `.env` file with random credentials for all services, then presents an interactive menu to configure API keys for OpenAI, Anthropic, and/or Google. Any providers you skip will remain as `user_provided`, letting users enter their own keys in the LibreChat UI.
+This generates a `.env` file with random credentials for all services, then presents an interactive menu to configure API keys for OpenAI, Anthropic, and/or Google.
+
+> **You need at least one real provider key.** LibreChat does not hold LLM keys in this stack — it routes every request to the LiteLLM proxy (see `librechat.yaml`), and LiteLLM reads the keys from `.env`. Providers you skip are left blank, and their models will fail to answer. Remove unused providers from `litellm_config.yaml` and `librechat.yaml` if you want them out of the model picker.
 
 You can also generate credentials separately and customize the admin account:
 
@@ -136,7 +138,7 @@ docker compose up -d
 | Service | URL | Credentials |
 |---|---|---|
 | **LibreChat** | [http://localhost:3080](http://localhost:3080) | From `.env` (`LIBRECHAT_USER_EMAIL` / `LIBRECHAT_USER_PASSWORD`) |
-| **Phoenix** | [http://localhost:6006](http://localhost:6006) | No auth required |
+| **Phoenix** | [http://localhost:6006](http://localhost:6006) | No auth — bound to `127.0.0.1` |
 | **LiteLLM** | [http://localhost:4000](http://localhost:4000) | Optional `LITELLM_MASTER_KEY` |
 
 An admin user is created automatically on first startup using the credentials from your `.env` file.
@@ -145,7 +147,7 @@ An admin user is created automatically on first startup using the credentials fr
 
 1. Open LibreChat at [http://localhost:3080](http://localhost:3080)
 2. Click **Create New Agent** in the sidebar
-3. Select a provider and model (e.g., Google / gemini-2.5-flash)
+3. Select a provider and model (e.g., Google / gemini-3.7-flash)
 4. Open **MCP Settings** and verify the `data-warehouse` server is connected
 5. Save the agent and start chatting — ask it to query your data
 
@@ -171,7 +173,7 @@ Create a `docker-compose.override.yml` (gitignored) to mount your local ADC:
 ```yaml
 services:
   toolbox-mcp:
-    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:4318"]
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:6006"]
     volumes:
       - type: bind
         source: ./tools.yaml
@@ -292,7 +294,6 @@ LibreChat connects to your data warehouse through MCP Toolbox, allowing AI agent
 | `scripts/prepare-demo.sh` | Generate `.env` and interactively configure API keys |
 | `scripts/generate-env.sh` | Generate `.env` with random credentials |
 | `scripts/reset-all.sh` | Stop all containers and wipe all data/volumes |
-| `scripts/create-librechat-user.sh` | Manually create a LibreChat admin user |
 | `scripts/init-librechat-user.sh` | Auto-init user on container startup (used internally) |
 
 ## Reset Everything
@@ -314,13 +315,13 @@ docker compose up -d
 
 **Port 5050 conflict:** If port `5050` is already in use, change the host mapping in `toolbox-mcp-compose.yml` (for example, `127.0.0.1:5051:5000`) and keep `librechat.yaml` pointed at `http://toolbox-mcp:5000/mcp`.
 
-**"No key found" in LibreChat:** You need to configure an LLM API key. Either set it in `.env` (e.g., `GOOGLE_KEY=your-key`) and restart LibreChat, or run `./scripts/prepare-demo.sh` to set keys interactively.
+**Provider auth errors in LibreChat:** LLM keys are held by LiteLLM, not LibreChat. Set the key in `.env` (e.g., `GOOGLE_KEY=your-key`) and restart the **litellm** container (`docker compose up -d litellm`), or run `./scripts/prepare-demo.sh` to set keys interactively.
 
 **MCP server not showing in agent config:** Check that LibreChat can reach the Toolbox container. Run `docker logs <toolbox-mcp-container>` to confirm Toolbox initialized 1+ tools, and `docker logs <librechat-container>` for MCP client initialization messages.
 
-**No traces in Phoenix:** Verify LiteLLM can reach Phoenix: `docker logs <litellm-container>` should show OTEL export activity. Check that `OTEL_ENDPOINT` is set to `http://phoenix:6006` in the LiteLLM container.
+**No traces in Phoenix:** Phoenix serves the OTLP HTTP collector on port **6006** (the same port as the UI) and OTLP gRPC on **4317** — it does not listen on 4318. Verify LiteLLM can reach it: `docker logs <litellm-container>` should show OTEL export activity, and `OTEL_ENDPOINT` should be `http://phoenix:6006`. MCP Toolbox points at the same collector via `--telemetry-otlp phoenix:6006` in `toolbox-mcp-compose.yml`.
 
-> **Note:** To use LibreChat's **file search / RAG** features, the RAG API needs a real API key for embeddings — `user_provided` won't work because the RAG API calls the embeddings endpoint directly. If `OPENAI_API_KEY` is set to `user_provided`, set `RAG_OPENAI_API_KEY` to a valid OpenAI key (it overrides `OPENAI_API_KEY` for RAG only). You can also switch embedding providers via `EMBEDDINGS_PROVIDER` (`openai`, `azure`, `huggingface`, `huggingfacetei`, `ollama`). See the [RAG API docs](https://librechat.ai/docs/configuration/rag_api) for details.
+> **Note:** To use LibreChat's **file search / RAG** features, the RAG API needs a real API key for embeddings. It calls the embeddings endpoint directly and does not go through LiteLLM, so if `OPENAI_API_KEY` is blank (or you route chat through another provider), set `RAG_OPENAI_API_KEY` to a valid OpenAI key — it overrides `OPENAI_API_KEY` for RAG only. You can also switch embedding providers via `EMBEDDINGS_PROVIDER` (`openai`, `azure`, `huggingface`, `huggingfacetei`, `ollama`). See the [RAG API docs](https://librechat.ai/docs/configuration/rag_api) for details.
 
 ## Links
 

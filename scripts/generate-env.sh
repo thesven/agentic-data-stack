@@ -97,10 +97,15 @@ LIBRECHAT_USER_NAME=${USER_NAME}
 CREDS_KEY=$(openssl rand -hex 32)
 CREDS_IV=$(openssl rand -hex 16)
 
-# LibreChat API Keys - Set to "user_provided" to allow users to configure their own keys in the UI
-ANTHROPIC_API_KEY=user_provided
-GOOGLE_KEY=user_provided
-OPENAI_API_KEY=user_provided
+# LLM Provider API Keys — consumed by the LiteLLM proxy, not by LibreChat.
+# LibreChat talks only to LiteLLM (see librechat.yaml), so these must be real keys:
+# there is no "user_provided" path any more — LiteLLM would send that string
+# verbatim as the API key and every request to that provider would fail auth.
+# Leave a provider blank if you don't intend to use it, and remove its models
+# from litellm_config.yaml and librechat.yaml.
+ANTHROPIC_API_KEY=
+GOOGLE_KEY=
+OPENAI_API_KEY=
 
 EOF
 
@@ -114,6 +119,10 @@ echo "   - LibreChat encryption keys"
 echo "   - Meilisearch master key"
 echo "   - VectorDB password"
 echo "   - Initial user credentials (preset)"
+echo ""
+echo "🔑 No LLM provider keys were set. Add at least one real key to .env"
+echo "   (ANTHROPIC_API_KEY / OPENAI_API_KEY / GOOGLE_KEY) or run"
+echo "   ./scripts/prepare-demo.sh to enter them interactively."
 echo ""
 echo "👤 Preset User Credentials:"
 echo "   Email: ${USER_EMAIL}"

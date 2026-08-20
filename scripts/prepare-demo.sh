@@ -100,7 +100,8 @@ multiselect() {
 echo "=== API Key Configuration ==="
 echo ""
 echo "  Select which providers to configure with API keys."
-echo "  Unchecked providers environment variables not modified."
+echo "  Keys are held by the LiteLLM proxy — you need at least one to chat."
+echo "  Unchecked providers are left as-is; their models will fail to answer."
 echo ""
 echo "  ↑/↓ to navigate · Space to toggle · Enter to confirm"
 
@@ -159,7 +160,7 @@ for i in "${!PROVIDERS[@]}"; do
     if $found; then
         echo "    ✔ ${PROVIDERS[$i]}  (configured)"
     else
-        echo "    - ${PROVIDERS[$i]}  (user_provided)"
+        echo "    - ${PROVIDERS[$i]}  (no key — models unavailable)"
     fi
 done
 echo ""

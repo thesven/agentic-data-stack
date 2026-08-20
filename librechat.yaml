@@ -41,10 +41,10 @@ endpoints:
       apiKey: "sk-litellm-proxy"
       baseURL: "http://litellm:4000/v1"
       models:
-        default: ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o3-mini", "o4-mini", "gpt-5.2"]
+        default: ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]
         fetch: false
       titleConvo: true
-      titleModel: "gpt-4.1-nano"
+      titleModel: "gpt-5.6-luna"
       summarize: false
       forcePrompt: false
       modelDisplayLabel: "OpenAI"
@@ -53,10 +53,10 @@ endpoints:
       apiKey: "sk-litellm-proxy"
       baseURL: "http://litellm:4000/v1"
       models:
-        default: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+        default: ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"]
         fetch: false
       titleConvo: true
-      titleModel: "claude-haiku-4-5-20251001"
+      titleModel: "claude-haiku-4-5"
       summarize: false
       forcePrompt: false
       modelDisplayLabel: "Anthropic"
@@ -65,10 +65,10 @@ endpoints:
       apiKey: "sk-litellm-proxy"
       baseURL: "http://litellm:4000/v1"
       models:
-        default: ["gemini-2.5-pro", "gemini-2.5-flash"]
+        default: ["gemini-3.1-pro-preview", "gemini-3.7-flash", "gemini-3.5-flash-lite"]
         fetch: false
       titleConvo: true
-      titleModel: "gemini-2.5-flash"
+      titleModel: "gemini-3.5-flash-lite"
       summarize: false
       forcePrompt: false
       modelDisplayLabel: "Google"
