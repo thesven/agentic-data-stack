@@ -56,7 +56,7 @@ services:
       - LIBRECHAT_USER_PASSWORD=${LIBRECHAT_USER_PASSWORD:-password}
       - LIBRECHAT_USER_NAME=${LIBRECHAT_USER_NAME:-Admin}
       - LIBRECHAT_PORT=${LIBRECHAT_PORT:-3080}
-      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-workos-2}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-agentic-data-stack}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - type: bind

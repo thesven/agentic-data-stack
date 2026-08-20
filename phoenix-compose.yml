@@ -7,7 +7,7 @@ services:
     image: arizephoenix/phoenix:latest
     restart: always
     ports:
-      - "6006:6006"       # UI + OTLP HTTP
+      - "127.0.0.1:6006:6006"   # UI + OTLP HTTP
       - "127.0.0.1:4317:4317"   # OTLP gRPC
     environment:
       PHOENIX_SQL_DATABASE_URL: postgresql://${PHOENIX_DB_USER:-phoenix}:${PHOENIX_DB_PASSWORD}@phoenix-db:5432/${PHOENIX_DB_NAME:-phoenix}

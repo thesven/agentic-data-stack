@@ -53,10 +53,10 @@ endpoints:
       apiKey: "sk-litellm-proxy"
       baseURL: "http://litellm:4000/v1"
       models:
-        default: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
+        default: ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"]
         fetch: false
       titleConvo: true
-      titleModel: "claude-haiku-4-5-20251001"
+      titleModel: "claude-haiku-4-5"
       summarize: false
       forcePrompt: false
       modelDisplayLabel: "Anthropic"

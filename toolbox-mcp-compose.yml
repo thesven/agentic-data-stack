@@ -6,7 +6,7 @@ services:
   toolbox-mcp:
     image: us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:latest
     restart: always
-    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:4318"]
+    command: ["--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000", "--telemetry-otlp", "phoenix:6006"]
     volumes:
       - type: bind
         source: ./tools.yaml
