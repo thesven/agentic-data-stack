@@ -5,3 +5,4 @@ include:
   - phoenix-compose.yml
   - toolbox-mcp-compose.yml
   - librechat-compose.yml
+  # - snowflake-mcp-compose.yml  # Uncomment to use Snowflake Labs MCP (supports key-pair auth)
